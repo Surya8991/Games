@@ -2,6 +2,7 @@
 
 import { Share2, RotateCcw, Trophy, Home } from "lucide-react";
 import Link from "next/link";
+import { useEffect } from "react";
 import { Modal } from "./Modal";
 
 export function GameOverModal({
@@ -25,6 +26,18 @@ export function GameOverModal({
   shareText?: string;
   onRestart?: () => void;
 }) {
+  useEffect(() => {
+    if (!open || !isNewBest) return;
+    let cancelled = false;
+    import("canvas-confetti").then((m) => {
+      if (cancelled) return;
+      const confetti = m.default;
+      confetti({ particleCount: 110, spread: 70, origin: { y: 0.6 }, colors: ["#b14aed", "#22d3ee", "#fde047", "#ec4899", "#22ee9c"] });
+      setTimeout(() => confetti({ particleCount: 60, spread: 90, origin: { y: 0.6 }, colors: ["#22d3ee", "#fde047"] }), 250);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [open, isNewBest]);
+
   const share = async () => {
     const text = shareText || `I scored ${score} on Arcade-15! 🕹️`;
     if (navigator.share) {
