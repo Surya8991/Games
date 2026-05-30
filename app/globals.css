@@ -1,0 +1,122 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Press+Start+2P&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: #0a0a14;
+  color: #e8e8f5;
+  font-family: Inter, system-ui, sans-serif;
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(177, 74, 237, 0.15), transparent),
+    radial-gradient(ellipse 80% 50% at 80% 100%, rgba(34, 211, 238, 0.12), transparent),
+    linear-gradient(180deg, #0a0a14 0%, #07070f 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+@layer components {
+  .neon-text {
+    @apply text-neon-purple;
+    text-shadow: 0 0 8px currentColor, 0 0 24px rgba(177, 74, 237, 0.5);
+  }
+  .neon-text-cyan {
+    @apply text-neon-cyan;
+    text-shadow: 0 0 8px currentColor, 0 0 24px rgba(34, 211, 238, 0.5);
+  }
+  .neon-border {
+    @apply border border-neon-purple/40;
+    box-shadow: 0 0 12px rgba(177, 74, 237, 0.25), inset 0 0 12px rgba(177, 74, 237, 0.05);
+  }
+  .arcade-card {
+    @apply relative overflow-hidden rounded-xl bg-bg-card/80 backdrop-blur border border-white/5
+           transition-all duration-200 hover:-translate-y-0.5 hover:border-neon-purple/50
+           hover:shadow-neon;
+  }
+  .btn-primary {
+    @apply inline-flex items-center gap-2 rounded-lg px-4 py-2 font-medium
+           bg-neon-purple/15 text-neon-purple border border-neon-purple/40
+           hover:bg-neon-purple/25 hover:shadow-neon transition;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 rounded-lg px-3 py-2
+           text-white/70 hover:text-white hover:bg-white/5 transition;
+  }
+  .pixel-font {
+    font-family: "Press Start 2P", monospace;
+    letter-spacing: 0.02em;
+  }
+}
+
+/* Prevent body scroll on canvas games */
+.no-scroll {
+  overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+canvas {
+  touch-action: none;
+  display: block;
+}
+
+/* Scanline overlay (optional, applied via class) */
+.scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 2px,
+    rgba(0, 0, 0, 0.18) 3px,
+    transparent 4px
+  );
+  mix-blend-mode: overlay;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0a14;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a2a40;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b14aed;
+}
+
+/* Hide scrollbars on horizontal pill rows */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { scrollbar-width: none; }
+
+/* Safe-area for notches */
+.safe-pad {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

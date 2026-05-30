@@ -1,0 +1,181 @@
+export type GameCategory = "puzzle" | "classic" | "action" | "board";
+
+export type GameMeta = {
+  slug: string;
+  title: string;
+  blurb: string;
+  emoji: string;
+  category: GameCategory;
+  accent: string; // tailwind color class for the card glow
+  controls: string[]; // short hints
+  orientation?: "portrait" | "landscape" | "any";
+  hot?: boolean;
+};
+
+export const GAMES: GameMeta[] = [
+  {
+    slug: "wordle",
+    title: "Wordle",
+    blurb: "Guess the 5-letter word in 6 tries. Daily + unlimited.",
+    emoji: "🟩",
+    category: "puzzle",
+    accent: "text-neon-green",
+    controls: ["Type", "Enter", "Backspace"],
+    hot: true,
+  },
+  {
+    slug: "2048",
+    title: "2048",
+    blurb: "Merge tiles. Reach 2048. Undo, themes, 3×3 to 5×5.",
+    emoji: "🔢",
+    category: "puzzle",
+    accent: "text-neon-yellow",
+    controls: ["Swipe", "Arrows", "WASD"],
+    hot: true,
+  },
+  {
+    slug: "tetris",
+    title: "Tetris",
+    blurb: "Stack, clear, combo. SRS, hold, T-spins, ghost piece.",
+    emoji: "🟦",
+    category: "classic",
+    accent: "text-neon-cyan",
+    controls: ["Arrows", "Space", "C/Shift"],
+    orientation: "portrait",
+    hot: true,
+  },
+  {
+    slug: "snake",
+    title: "Snake",
+    blurb: "Eat, grow, don't crash. Classic + wrap + maze.",
+    emoji: "🐍",
+    category: "classic",
+    accent: "text-neon-green",
+    controls: ["Arrows", "Swipe"],
+  },
+  {
+    slug: "tic-tac-toe",
+    title: "Tic-Tac-Toe",
+    blurb: "Vs unbeatable AI, vs friend, 3×3/4×4/5×5.",
+    emoji: "❌",
+    category: "board",
+    accent: "text-neon-pink",
+    controls: ["Click", "Tap"],
+  },
+  {
+    slug: "connect-four",
+    title: "Connect Four",
+    blurb: "Drop discs, line up 4. Strong alpha-beta AI.",
+    emoji: "🔴",
+    category: "board",
+    accent: "text-neon-pink",
+    controls: ["Click", "Tap"],
+  },
+  {
+    slug: "minesweeper",
+    title: "Minesweeper",
+    blurb: "Beginner → Expert. No-guess solvable boards.",
+    emoji: "💣",
+    category: "puzzle",
+    accent: "text-neon-cyan",
+    controls: ["Click", "Right-click flag"],
+  },
+  {
+    slug: "memory",
+    title: "Memory Match",
+    blurb: "Flip pairs. Multiple themes, 4×4 to 8×8.",
+    emoji: "🃏",
+    category: "puzzle",
+    accent: "text-neon-purple",
+    controls: ["Click", "Tap"],
+  },
+  {
+    slug: "flappy",
+    title: "Flappy Bird",
+    blurb: "Tap to flap. Don't hit the pipes. Medals await.",
+    emoji: "🐤",
+    category: "action",
+    accent: "text-neon-yellow",
+    controls: ["Tap", "Space"],
+    hot: true,
+  },
+  {
+    slug: "doodle-jump",
+    title: "Doodle Jump",
+    blurb: "Bounce higher. Springs, jetpacks, monsters.",
+    emoji: "🦘",
+    category: "action",
+    accent: "text-neon-green",
+    controls: ["Arrows", "Tilt", "Drag"],
+    orientation: "portrait",
+  },
+  {
+    slug: "breakout",
+    title: "Breakout",
+    blurb: "Bounce. Break. 20 levels + power-ups.",
+    emoji: "🧱",
+    category: "classic",
+    accent: "text-neon-pink",
+    controls: ["Mouse", "Arrows", "Drag"],
+  },
+  {
+    slug: "pong",
+    title: "Pong",
+    blurb: "OG paddle battle. 1P vs AI or 2P local.",
+    emoji: "🏓",
+    category: "classic",
+    accent: "text-neon-cyan",
+    controls: ["W/S", "↑/↓", "Drag"],
+  },
+  {
+    slug: "pacman",
+    title: "Pac-Man",
+    blurb: "Eat dots, dodge ghosts. Authentic AI personalities.",
+    emoji: "🟡",
+    category: "classic",
+    accent: "text-neon-yellow",
+    controls: ["Arrows", "Swipe"],
+    orientation: "landscape",
+    hot: true,
+  },
+  {
+    slug: "asteroids",
+    title: "Asteroids",
+    blurb: "Vector chaos. Thrust, rotate, blast, hyperspace.",
+    emoji: "🚀",
+    category: "action",
+    accent: "text-neon-cyan",
+    controls: ["Arrows", "Space"],
+  },
+  {
+    slug: "chess",
+    title: "Chess",
+    blurb: "Full FIDE rules. Stockfish AI. Blitz/Rapid timer.",
+    emoji: "♟️",
+    category: "board",
+    accent: "text-neon-purple",
+    controls: ["Click", "Drag"],
+  },
+  {
+    slug: "mario",
+    title: "Super Pixel",
+    blurb: "Mario-style platformer. Run, jump, stomp, collect coins.",
+    emoji: "🍄",
+    category: "action",
+    accent: "text-neon-pink",
+    controls: ["A/D or ←/→", "Space jump"],
+    orientation: "landscape",
+    hot: true,
+  },
+  {
+    slug: "space-invaders",
+    title: "Space Invaders",
+    blurb: "Defend Earth! Shoot the alien waves before they land.",
+    emoji: "👾",
+    category: "classic",
+    accent: "text-neon-green",
+    controls: ["←/→ move", "Space fire"],
+  },
+];
+
+export const getGame = (slug: string) => GAMES.find((g) => g.slug === slug);
