@@ -8,47 +8,26 @@
   color-scheme: dark;
 }
 
-html,
-body {
+html, body {
   background: #0a0a14;
   color: #e8e8f5;
   font-family: Inter, system-ui, sans-serif;
-  min-height: 100%;
+  min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
 
 body {
+  background-attachment: fixed;
   background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.4), transparent 2px),
+    radial-gradient(1px 1px at 65% 12%, rgba(255,255,255,0.35), transparent 2px),
+    radial-gradient(2px 2px at 82% 42%, rgba(177,74,237,0.35), transparent 3px),
+    radial-gradient(1px 1px at 35% 72%, rgba(34,211,238,0.35), transparent 2px),
+    radial-gradient(1px 1px at 90% 82%, rgba(255,255,255,0.3), transparent 2px),
+    radial-gradient(2px 2px at 12% 90%, rgba(236,72,153,0.3), transparent 3px),
     radial-gradient(ellipse 80% 50% at 20% 0%, rgba(177, 74, 237, 0.20), transparent),
     radial-gradient(ellipse 80% 50% at 80% 100%, rgba(34, 211, 238, 0.15), transparent),
-    radial-gradient(ellipse 60% 40% at 50% 50%, rgba(236, 72, 153, 0.06), transparent),
     linear-gradient(180deg, #0a0a14 0%, #07070f 100%);
-  background-attachment: fixed;
-  min-height: 100vh;
-}
-
-/* Subtle animated star field */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.6), transparent),
-    radial-gradient(1px 1px at 60% 10%, rgba(255,255,255,0.5), transparent),
-    radial-gradient(2px 2px at 80% 40%, rgba(177,74,237,0.5), transparent),
-    radial-gradient(1px 1px at 35% 70%, rgba(34,211,238,0.5), transparent),
-    radial-gradient(1px 1px at 90% 80%, rgba(255,255,255,0.4), transparent),
-    radial-gradient(2px 2px at 10% 90%, rgba(236,72,153,0.4), transparent);
-  background-size: 100% 100%;
-  z-index: 0;
-  animation: starShift 60s linear infinite;
-}
-body > * { position: relative; z-index: 1; }
-@keyframes starShift {
-  from { transform: translate3d(0, 0, 0); opacity: 0.6; }
-  50% { opacity: 1; }
-  to { transform: translate3d(0, -100px, 0); opacity: 0.6; }
 }
 
 @layer components {

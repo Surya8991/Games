@@ -27,6 +27,7 @@ export default function Home() {
   const [achCount, setAchCount] = useState(0);
   const [totalPlays, setTotalPlays] = useState(0);
   const [showHot, setShowHot] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const load = () => {
     setRecent(getRecent());
@@ -36,6 +37,7 @@ export default function Home() {
   };
 
   useEffect(() => {
+    setMounted(true);
     load();
     const onChange = () => load();
     window.addEventListener("name-changed", onChange);
@@ -62,15 +64,16 @@ export default function Home() {
   );
 
   const topScores = useMemo(() => {
+    if (!mounted) return [];
     return GAMES
       .map((g) => ({ g, score: getHighScore(g.slug) }))
       .filter((x) => x.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
-  }, [recent]); // refresh on recent change
+  }, [mounted, recent]); // refresh on mount + recent change
 
   const daily = useMemo(() => dailyGame(), []);
-  const dateLabel = useMemo(() => dailyDateLabel(), []);
+  const dateLabel = mounted ? dailyDateLabel() : "";
 
   return (
     <div className="min-h-screen safe-pad">
