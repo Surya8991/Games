@@ -31,7 +31,11 @@ export default function SpherePong() {
     aiX: 0, aiY: 0,
     last: 0,
     mouseX: 0, mouseY: 0,
+    paused: false,
+    over: false,
   });
+  useEffect(() => { sRef.current.paused = paused; }, [paused]);
+  useEffect(() => { sRef.current.over = over; }, [over]);
 
   useEffect(() => { pushRecent("sphere-pong"); }, []);
 
@@ -120,7 +124,7 @@ export default function SpherePong() {
       aPad.position.x = Math.max(-halfW, Math.min(halfW, sRef.current.aiX));
       aPad.position.y = Math.max(-halfH, Math.min(halfH, sRef.current.aiY));
 
-      if (!paused && !over) {
+      if (!sRef.current.paused && !sRef.current.over) {
         sRef.current.ball.add(sRef.current.vel);
         // walls
         if (Math.abs(sRef.current.ball.x) > ARENA_W / 2 - BALL_R) { sRef.current.vel.x *= -1; play("tick"); }
@@ -179,7 +183,7 @@ export default function SpherePong() {
       window.removeEventListener("keydown", dn); window.removeEventListener("keyup", up);
       dispose();
     };
-  }, [paused, over, play, vibrate]);
+  }, []); // scene initialized once
 
   return (
     <GameShell game={game} score={`${score.p} : ${score.a}`} paused={paused} onTogglePause={() => setPaused((p) => !p)} onRestart={reset} onOpenHowTo={() => setShowHow(true)}>

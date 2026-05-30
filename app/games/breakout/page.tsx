@@ -260,20 +260,22 @@ export default function BreakoutGame() {
           }
         }
         st.balls = st.balls.filter((b) => b.y < H + 20);
-        if (st.balls.length === 0) {
+        if (st.balls.length === 0 && !over) {
+          let isOver = false;
           setLives((l) => {
             const next = l - 1;
-            if (next <= 0) {
-              setOver(true);
-              const ok = setHighScore("breakout", score); if (ok) setBest(score);
-              updateStats("breakout", { plays: 1, losses: 1, bestScore: score });
-              play("lose"); vibrate(180);
-            } else {
-              st.balls = [{ x: st.padX + st.padW / 2, y: H - 40, vx: st.levelSpeed * 0.7, vy: -st.levelSpeed }];
-              st.started = false;
-            }
+            if (next <= 0) isOver = true;
             return Math.max(0, next);
           });
+          if (isOver) {
+            setOver(true);
+            const ok = setHighScore("breakout", score); if (ok) setBest(score);
+            updateStats("breakout", { plays: 1, losses: 1, bestScore: score });
+            play("lose"); vibrate(180);
+          } else {
+            st.balls = [{ x: st.padX + st.padW / 2, y: H - 40, vx: st.levelSpeed * 0.7, vy: -st.levelSpeed }];
+            st.started = false;
+          }
         }
         // powers fall
         for (const p of st.powers) p.y += 2.4 * (dt / 16);

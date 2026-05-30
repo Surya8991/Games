@@ -103,7 +103,17 @@ export default function MarbleMaze() {
     last: 0,
     keys: {} as Record<string, boolean>,
     coinsLeft: 0,
+    over: false,
+    running: false,
+    level: 1,
+    time: 0,
+    unlocked: 1,
   });
+  useEffect(() => { sRef.current.over = over; }, [over]);
+  useEffect(() => { sRef.current.running = running; }, [running]);
+  useEffect(() => { sRef.current.level = level; }, [level]);
+  useEffect(() => { sRef.current.time = time; }, [time]);
+  useEffect(() => { sRef.current.unlocked = unlocked; }, [unlocked]);
 
   useEffect(() => { pushRecent("marble-maze"); setUnlocked(storage.get<number>("marble-maze:unlocked", 1)); }, []);
   useEffect(() => { setBest(getHighScore("marble-maze", `t-${level}`)); }, [level]);
@@ -239,7 +249,7 @@ export default function MarbleMaze() {
       group.rotation.x = st.boardTiltX;
       group.rotation.z = -st.boardTiltZ;
 
-      if (!over && running) {
+      if (!sRef.current.over && sRef.current.running) {
         // ball physics — gravity along tilted plane
         const accel = 8;
         st.ball.vx += st.boardTiltZ * accel * (dt / 1000);
@@ -259,19 +269,22 @@ export default function MarbleMaze() {
 
         // hole?
         if (inBounds && rows[cellZ][cellX] === "H") {
-          setOver(true); setWon(false); setRunning(false);
+          setOver(true); setWon(false); setRunning(false); sRef.current.over = true;
           play("lose"); vibrate(150);
           updateStats("marble-maze", { plays: 1, losses: 1 });
         }
         // goal?
         const gx = (group as any).goalX, gz = (group as any).goalZ;
         if (gx !== undefined && Math.abs(st.ball.x - gx) < 0.4 && Math.abs(st.ball.z - gz) < 0.4) {
-          setOver(true); setWon(true); setRunning(false);
+          const curLevel = sRef.current.level;
+          const curTime = sRef.current.time;
+          const curUnlocked = sRef.current.unlocked;
+          setOver(true); setWon(true); setRunning(false); sRef.current.over = true;
           play("win"); vibrate([40, 30, 60]);
-          const prev = getHighScore("marble-maze", `t-${level}`);
-          if (prev === 0 || time < prev) { setHighScore("marble-maze", time, `t-${level}`); setBest(time); }
-          const next = level + 1;
-          if (next > unlocked && next <= TOTAL_LEVELS) { setUnlocked(next); storage.set("marble-maze:unlocked", next); }
+          const prev = getHighScore("marble-maze", `t-${curLevel}`);
+          if (prev === 0 || curTime < prev) { setHighScore("marble-maze", curTime, `t-${curLevel}`); setBest(curTime); }
+          const next = curLevel + 1;
+          if (next > curUnlocked && next <= TOTAL_LEVELS) { setUnlocked(next); storage.set("marble-maze:unlocked", next); }
           updateStats("marble-maze", { plays: 1, wins: 1 });
         }
         // coin pickup
@@ -302,7 +315,7 @@ export default function MarbleMaze() {
     raf = requestAnimationFrame(tick);
 
     return () => { cancelAnimationFrame(raf); dispose(); };
-  }, [level, over, running, time, unlocked, buildLevel, play, vibrate]); // eslint-disable-line
+  }, []); // scene initialized once; state via refs
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 

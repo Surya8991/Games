@@ -235,20 +235,24 @@ export default function PacManGame() {
               setScore((sc) => sc + 200 * (1 << (st.eatChain - 1)));
               play("ding"); vibrate(40);
             } else if (g.mode !== "eaten") {
+              let isOver = false;
               setLives((l) => {
                 const n = l - 1;
-                if (n <= 0) {
-                  setOver(true);
-                  const ok = setHighScore("pacman", score); if (ok) setBest(score);
-                  updateStats("pacman", { plays: 1, losses: 1, bestScore: score });
-                  play("lose"); vibrate(200);
-                } else {
-                  st.pac.x = 10 * CELL; st.pac.y = 15 * CELL; st.pac.dir = [0, 0]; st.pac.nextDir = [0, 0];
-                  st.ghosts = initGhosts();
-                  play("thud"); vibrate(120);
-                }
+                if (n <= 0) isOver = true;
                 return Math.max(0, n);
               });
+              if (isOver) {
+                setOver(true);
+                const ok = setHighScore("pacman", score); if (ok) setBest(score);
+                updateStats("pacman", { plays: 1, losses: 1, bestScore: score });
+                play("lose"); vibrate(200);
+                return; // stop ghost iteration this frame
+              } else {
+                st.pac.x = 10 * CELL; st.pac.y = 15 * CELL; st.pac.dir = [0, 0]; st.pac.nextDir = [0, 0];
+                st.ghosts = initGhosts();
+                play("thud"); vibrate(120);
+                break; // restart ghost loop with reset positions
+              }
             }
           }
           // eaten ghost reaches spawn

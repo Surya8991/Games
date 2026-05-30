@@ -9,11 +9,12 @@ export function makeScene(canvas: HTMLCanvasElement, opts: {
   fog?: { color: number; near: number; far: number };
   shadows?: boolean;
 } = {}) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = opts.shadows ?? true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.4; // brighter neon
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
@@ -39,13 +40,16 @@ export function makeScene(canvas: HTMLCanvasElement, opts: {
   dir.shadow.camera.bottom = -d;
   scene.add(dir);
 
-  // Neon rim
-  const purple = new THREE.PointLight(0xb14aed, 1.4, 20);
+  // Neon rim — brighter, with subtle pulse
+  const purple = new THREE.PointLight(0xb14aed, 2.4, 24);
   purple.position.set(-5, 4, 2);
   scene.add(purple);
-  const cyan = new THREE.PointLight(0x22d3ee, 1.2, 20);
+  const cyan = new THREE.PointLight(0x22d3ee, 2.0, 24);
   cyan.position.set(5, 3, -2);
   scene.add(cyan);
+  const pink = new THREE.PointLight(0xec4899, 1.4, 18);
+  pink.position.set(0, 6, 5);
+  scene.add(pink);
 
   const handleResize = () => {
     const rect = canvas.getBoundingClientRect();

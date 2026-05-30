@@ -33,7 +33,9 @@ export default function CrossyHop() {
     lanes: [] as Lane[],
     maxZ: 0,
     hopAnim: 0,
+    over: false,
   });
+  useEffect(() => { sRef.current.over = over; }, [over]);
 
   useEffect(() => { pushRecent("crossy-3d"); setBest(getHighScore("crossy-3d")); }, []);
 
@@ -216,13 +218,13 @@ export default function CrossyHop() {
         for (const v of old.vehicles) scene.remove(v.mesh);
       }
       // collision
-      if (!over) {
+      if (!sRef.current.over) {
         const currLane = st.lanes.find((l) => l.z === st.targetZ);
         if (currLane) {
           if (currLane.kind === "road" || currLane.kind === "rail") {
             for (const v of currLane.vehicles) {
               if (Math.abs(v.x - st.targetX) < v.w / 2 + 0.3) {
-                setOver(true);
+                setOver(true); sRef.current.over = true;
                 const ok = setHighScore("crossy-3d", st.maxZ); if (ok) setBest(st.maxZ);
                 updateStats("crossy-3d", { plays: 1, losses: 1, bestScore: st.maxZ });
                 play("lose"); vibrate(180);
@@ -263,7 +265,7 @@ export default function CrossyHop() {
     });
 
     return () => { cancelAnimationFrame(raf); dispose(); };
-  }, [over, generateLane, play, vibrate]); // eslint-disable-line
+  }, []); // scene initialized once
 
   const reset = () => {
     const scene = sceneHolder.current;

@@ -236,6 +236,7 @@ export default function TetrisGame() {
   };
 
   const lockPiece = () => {
+    if (over || modeDone) return;
     const merged = merge(s.current.board, s.current.active);
     const { board, cleared } = clearLines(merged);
     s.current.board = board;

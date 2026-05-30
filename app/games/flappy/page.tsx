@@ -101,7 +101,20 @@ export default function FlappyGame() {
             }
           }
           st.pipes = st.pipes.filter((p) => p.x > -PIPE_W);
-          // collisions
+          // collisions — `crashed` mutates synchronously so a 2nd hit in the same frame is ignored
+          let crashed = false;
+          const crash = () => {
+            if (crashed || over) return;
+            crashed = true;
+            setOver(true);
+            const ok = setHighScore("flappy", score);
+            if (ok) setBest(score);
+            updateStats("flappy", { plays: 1, losses: 1, bestScore: score });
+            if (score >= 7) unlock("flappy-bronze");
+            if (score >= 40) unlock("flappy-platinum");
+            play("lose");
+            vibrate(180);
+          };
           if (st.y < 0 || st.y > H - 50) crash();
           for (const p of st.pipes) {
             if (80 + 22 > p.x && 80 - 22 < p.x + PIPE_W && (st.y < p.gapY || st.y > p.gapY + GAP)) {
@@ -113,18 +126,6 @@ export default function FlappyGame() {
           st.y = H / 2 + Math.sin(t / 200) * 8;
         }
         st.bgX = (st.bgX - 0.5 * (dt / 16)) % W;
-      }
-
-      function crash() {
-        if (over) return;
-        setOver(true);
-        const ok = setHighScore("flappy", score);
-        if (ok) setBest(score);
-        updateStats("flappy", { plays: 1, losses: 1, bestScore: score });
-        if (score >= 7) unlock("flappy-bronze");
-        if (score >= 40) unlock("flappy-platinum");
-        play("lose");
-        vibrate(180);
       }
 
       // background

@@ -27,7 +27,11 @@ export default function ColorSwitch3D() {
     rings: [] as { group: THREE.Group; segments: { mesh: THREE.Mesh; color: number }[]; y: number; cleared: boolean }[],
     last: 0,
     pickups: [] as THREE.Mesh[],
+    over: false,
+    score: 0,
   });
+  useEffect(() => { sRef.current.over = over; }, [over]);
+  useEffect(() => { sRef.current.score = score; }, [score]);
 
   useEffect(() => { pushRecent("color-switch-3d"); setBest(getHighScore("color-switch-3d")); }, []);
   const sceneHolder = useRef<THREE.Scene | null>(null);
@@ -114,7 +118,7 @@ export default function ColorSwitch3D() {
       const dt = st.last ? Math.min(48, t - st.last) : 16;
       st.last = t;
 
-      if (!over) {
+      if (!sRef.current.over) {
         st.vy -= 0.012;
         st.vy = Math.max(-0.5, st.vy);
         st.ballY += st.vy;
@@ -147,9 +151,10 @@ export default function ColorSwitch3D() {
               setScore((s) => s + 10);
               play("ding"); vibrate(15);
             } else {
-              setOver(true);
-              const ok = setHighScore("color-switch-3d", score); if (ok) setBest(score);
-              updateStats("color-switch-3d", { plays: 1, losses: 1, bestScore: score });
+              setOver(true); sRef.current.over = true;
+              const fs = sRef.current.score;
+              const ok = setHighScore("color-switch-3d", fs); if (ok) setBest(fs);
+              updateStats("color-switch-3d", { plays: 1, losses: 1, bestScore: fs });
               play("lose"); vibrate(180);
               break;
             }
@@ -207,7 +212,7 @@ export default function ColorSwitch3D() {
     };
     raf = requestAnimationFrame(tick);
     return () => { cancelAnimationFrame(raf); dispose(); };
-  }, [over, score, reset, makeRing, play, vibrate]); // eslint-disable-line
+  }, []); // scene initialized once
 
   return (
     <GameShell game={game} score={score} best={best} onRestart={reset} onOpenHowTo={() => setShowHow(true)}>

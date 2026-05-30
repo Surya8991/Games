@@ -28,7 +28,11 @@ export default function GalaxyShooter() {
     keys: {} as Record<string, boolean>,
     fireCool: 0,
     spawnAt: 0,
+    over: false,
+    score: 0,
   });
+  useEffect(() => { sRef.current.over = over; }, [over]);
+  useEffect(() => { sRef.current.score = score; }, [score]);
 
   useEffect(() => { pushRecent("galaxy-shooter"); setBest(getHighScore("galaxy-shooter")); }, []);
 
@@ -97,7 +101,7 @@ export default function GalaxyShooter() {
       const dt = st.last ? Math.min(48, t - st.last) : 16;
       st.last = t;
 
-      if (!over) {
+      if (!sRef.current.over) {
         const accel = 0.04;
         if (st.keys["a"] || st.keys["arrowleft"]) st.target.x -= accel;
         if (st.keys["d"] || st.keys["arrowright"]) st.target.x += accel;
@@ -124,7 +128,7 @@ export default function GalaxyShooter() {
           (m as any).rotV = { x: Math.random() * 0.04, y: Math.random() * 0.04 };
           scene.add(m);
           st.asteroids.push({ mesh: m, v: new THREE.Vector3(0, 0, 0.12 + Math.random() * 0.06) });
-          st.spawnAt = t + Math.max(280, 700 - score * 4);
+          st.spawnAt = t + Math.max(280, 700 - sRef.current.score * 4);
         }
         // move asteroids
         for (let i = st.asteroids.length - 1; i >= 0; i--) {
@@ -135,9 +139,10 @@ export default function GalaxyShooter() {
           if (a.mesh.position.z > 6) { scene.remove(a.mesh); st.asteroids.splice(i, 1); continue; }
           // collide ship
           if (a.mesh.position.distanceTo(st.ship) < 0.9) {
-            setOver(true);
-            const ok = setHighScore("galaxy-shooter", score); if (ok) setBest(score);
-            updateStats("galaxy-shooter", { plays: 1, losses: 1, bestScore: score });
+            const fs = sRef.current.score;
+            setOver(true); sRef.current.over = true;
+            const ok = setHighScore("galaxy-shooter", fs); if (ok) setBest(fs);
+            updateStats("galaxy-shooter", { plays: 1, losses: 1, bestScore: fs });
             play("lose"); vibrate(180);
             break;
           }
@@ -159,7 +164,7 @@ export default function GalaxyShooter() {
     };
     raf = requestAnimationFrame(tick);
     return () => { cancelAnimationFrame(raf); dispose(); };
-  }, [over, score, play, vibrate]);
+  }, []); // scene initialized once
 
   return (
     <GameShell game={game} score={score} best={best} onRestart={reset} onOpenHowTo={() => setShowHow(true)}>

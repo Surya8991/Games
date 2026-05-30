@@ -33,11 +33,11 @@ body {
 @layer components {
   .neon-text {
     @apply text-neon-purple;
-    text-shadow: 0 0 8px currentColor, 0 0 24px rgba(177, 74, 237, 0.5);
+    text-shadow: 0 0 6px currentColor, 0 0 18px rgba(177, 74, 237, 0.6), 0 0 36px rgba(177, 74, 237, 0.35);
   }
   .neon-text-cyan {
     @apply text-neon-cyan;
-    text-shadow: 0 0 8px currentColor, 0 0 24px rgba(34, 211, 238, 0.5);
+    text-shadow: 0 0 6px currentColor, 0 0 18px rgba(34, 211, 238, 0.6), 0 0 36px rgba(34, 211, 238, 0.35);
   }
   .neon-border {
     @apply border border-neon-purple/40;
@@ -83,6 +83,8 @@ body {
 canvas {
   touch-action: none;
   display: block;
+  /* Soft bloom-like glow without postprocessing */
+  filter: contrast(1.06) saturate(1.18);
 }
 
 /* Scanline overlay (optional, applied via class) */

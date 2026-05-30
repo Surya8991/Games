@@ -34,7 +34,14 @@ export default function CubeRunner3D() {
     nextSpawn: 0,
     timeAlive: 0,
     last: 0,
+    over: false,
+    coinsCollected: 0,
+    bestScoreLocal: 0,
   });
+
+  // Sync React over → ref so the long-lived loop reads it
+  useEffect(() => { stateRef.current.over = over; }, [over]);
+  useEffect(() => { stateRef.current.coinsCollected = coins; }, [coins]);
 
   useEffect(() => { pushRecent("cube-runner-3d"); setBest(getHighScore("cube-runner-3d")); }, []);
 
@@ -107,7 +114,7 @@ export default function CubeRunner3D() {
       const dt = st.last ? Math.min(48, t - st.last) : 16;
       st.last = t;
 
-      if (!over) {
+      if (!st.over) {
         st.timeAlive += dt;
         st.speed = Math.min(0.42, 0.18 + st.timeAlive * 0.00002);
 
@@ -159,7 +166,7 @@ export default function CubeRunner3D() {
           if (o.mesh.position.z > -0.6 && o.mesh.position.z < 0.6 && Math.round(st.currentLane) === o.lane) {
             if (o.kind === "block") {
               setOver(true);
-              const finalScore = Math.floor(st.timeAlive / 100) + coins * 10;
+              const finalScore = Math.floor(st.timeAlive / 100) + st.coinsCollected * 10;
               const ok = setHighScore("cube-runner-3d", finalScore); if (ok) setBest(finalScore);
               updateStats("cube-runner-3d", { plays: 1, losses: 1, bestScore: finalScore });
               play("lose"); vibrate(180);
@@ -174,8 +181,7 @@ export default function CubeRunner3D() {
         }
 
         // score by time
-        const newScore = Math.floor(st.timeAlive / 100);
-        if (newScore > score) setScore(newScore);
+        setScore((prev) => Math.max(prev, Math.floor(st.timeAlive / 100)));
       }
 
       renderer.render(scene, camera);
@@ -183,7 +189,7 @@ export default function CubeRunner3D() {
     };
     raf = requestAnimationFrame(tick);
     return () => { cancelAnimationFrame(raf); dispose(); };
-  }, [over]); // eslint-disable-line
+  }, []); // scene initialized once; loop reads stateRef.current.over
 
   return (
     <GameShell game={game} score={score} best={best} onRestart={reset} onOpenHowTo={() => setShowHow(true)} rightExtra={<span className="text-xs text-neon-yellow">× {coins}</span>}>

@@ -29,7 +29,9 @@ export default function Stack3D() {
     color: 200,
     last: 0,
     cameraY: 0,
+    over: false,
   });
+  useEffect(() => { sRef.current.over = over; }, [over]);
 
   useEffect(() => { pushRecent("stack-3d"); setBest(getHighScore("stack-3d")); }, []);
 
@@ -76,7 +78,7 @@ export default function Stack3D() {
   const drop = (scene: THREE.Scene) => {
     const st = sRef.current;
     const mv = st.moving;
-    if (!mv || over) return;
+    if (!mv || st.over) return; // read over from ref (always fresh)
     const top = st.stack[st.stack.length - 1];
     const pos = mv.axis === "x" ? mv.mesh.position.x : mv.mesh.position.z;
     const topPos = mv.axis === "x" ? top.x : top.z;
@@ -87,10 +89,13 @@ export default function Stack3D() {
     const overlap = right - left;
     if (overlap <= 0) {
       // miss — game over, drop tower
+      let finalScore = 0;
+      setScore((sc) => { finalScore = sc; return sc; });
       setOver(true);
+      st.over = true;
       st.falling.push(mv.mesh);
-      const ok = setHighScore("stack-3d", score); if (ok) setBest(score);
-      updateStats("stack-3d", { plays: 1, losses: 1, bestScore: score });
+      const ok = setHighScore("stack-3d", finalScore); if (ok) setBest(finalScore);
+      updateStats("stack-3d", { plays: 1, losses: 1, bestScore: finalScore });
       play("lose"); vibrate(150);
       st.moving = null;
       return;
@@ -156,7 +161,7 @@ export default function Stack3D() {
       st.last = t;
 
       // move moving block
-      if (st.moving && !over) {
+      if (st.moving && !st.over) {
         const m = st.moving;
         if (m.axis === "x") {
           m.mesh.position.x += m.speed * (dt / 16);
@@ -199,7 +204,7 @@ export default function Stack3D() {
       window.removeEventListener("keydown", onKey);
       dispose();
     };
-  }, [over]); // eslint-disable-line
+  }, []); // scene initialized once
 
   return (
     <GameShell game={game} score={score} best={best} onRestart={() => { if (sceneHolder.current.current) reset(sceneHolder.current); }} onOpenHowTo={() => setShowHow(true)}>

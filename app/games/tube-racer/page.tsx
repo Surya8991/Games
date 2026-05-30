@@ -28,7 +28,9 @@ export default function TubeRacer() {
     timeAlive: 0,
     last: 0,
     tubeProgress: 0,
+    over: false,
   });
+  useEffect(() => { sRef.current.over = over; }, [over]);
 
   useEffect(() => { pushRecent("tube-racer"); setBest(getHighScore("tube-racer")); }, []);
 
@@ -129,7 +131,7 @@ export default function TubeRacer() {
       const dt = st.last ? Math.min(48, t - st.last) : 16;
       st.last = t;
 
-      if (!over) {
+      if (!st.over) {
         st.timeAlive += dt;
         st.speed = Math.min(1.1, 0.5 + st.timeAlive * 0.00005);
         st.angle += (st.targetAngle - st.angle) * 0.2;
@@ -167,6 +169,7 @@ export default function TubeRacer() {
             diff = Math.min(diff, Math.PI * 2 - diff);
             if (diff < 0.45) {
               setOver(true);
+              st.over = true;
               const fs = Math.floor(st.timeAlive / 100);
               const ok = setHighScore("tube-racer", fs); if (ok) setBest(fs);
               updateStats("tube-racer", { plays: 1, losses: 1, bestScore: fs });
@@ -175,8 +178,7 @@ export default function TubeRacer() {
             }
           }
         }
-        const ns = Math.floor(st.timeAlive / 100);
-        if (ns > score) setScore(ns);
+        setScore((prev) => Math.max(prev, Math.floor(st.timeAlive / 100)));
       }
 
       renderer.render(scene, camera);
@@ -184,7 +186,7 @@ export default function TubeRacer() {
     };
     raf = requestAnimationFrame(tick);
     return () => { cancelAnimationFrame(raf); dispose(); };
-  }, [over]); // eslint-disable-line
+  }, []); // scene initialized once
 
   return (
     <GameShell game={game} score={score} best={best} onRestart={() => reset(sceneHolder.current)} onOpenHowTo={() => setShowHow(true)}>

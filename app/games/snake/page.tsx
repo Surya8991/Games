@@ -107,6 +107,7 @@ export default function SnakeGame() {
 
   const finishLevel = useCallback((didWin: boolean) => {
     const s = stateRef.current;
+    if (!s.alive) return; // already finished
     s.alive = false;
     setOver(true);
     setWon(didWin);
