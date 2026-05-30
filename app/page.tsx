@@ -2,30 +2,38 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Trophy, Sparkles, Award, Flame, Pencil, Gamepad2, Star } from "lucide-react";
+import { Search, Trophy, Sparkles, Award, Flame, Pencil, Gamepad2, Star, Shuffle, ArrowUpDown, Settings as SettingsIcon, Zap } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { GAMES, GameCategory } from "@/lib/games-meta";
 import { GameCard } from "@/components/GameCard";
-import { getRecent, getPlayerName, getHighScore, storage } from "@/lib/storage";
+import { getRecent, getPlayerName, getHighScore, storage, getFavorites, getStats } from "@/lib/storage";
 import { cn } from "@/lib/cn";
 import { ACHIEVEMENTS, unlocked } from "@/lib/achievements";
 import { dailyGame, dailyDateLabel } from "@/lib/daily-challenge";
 
-const CATS: { id: "all" | GameCategory; label: string; emoji: string }[] = [
+const CATS: { id: "all" | "favorites" | GameCategory; label: string; emoji: string }[] = [
   { id: "all", label: "All", emoji: "🎮" },
+  { id: "favorites", label: "Faves", emoji: "⭐" },
   { id: "puzzle", label: "Puzzle", emoji: "🧩" },
   { id: "classic", label: "Classic", emoji: "🕹️" },
   { id: "action", label: "Action", emoji: "💥" },
   { id: "board", label: "Board", emoji: "♟️" },
+  { id: "3d", label: "3D", emoji: "🧊" },
 ];
 
+type SortKey = "default" | "best" | "plays" | "az" | "recent" | "hot";
+
 export default function Home() {
+  const router = useRouter();
   const [q, setQ] = useState("");
-  const [cat, setCat] = useState<"all" | GameCategory>("all");
+  const [cat, setCat] = useState<"all" | "favorites" | GameCategory>("all");
+  const [sort, setSort] = useState<SortKey>("default");
   const [recent, setRecent] = useState<string[]>([]);
   const [name, setName] = useState("");
   const [achCount, setAchCount] = useState(0);
   const [totalPlays, setTotalPlays] = useState(0);
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [showHot, setShowHot] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -34,6 +42,7 @@ export default function Home() {
     setName(getPlayerName());
     setAchCount(Object.keys(unlocked()).length);
     setTotalPlays(storage.get<number>("totalPlays", 0));
+    setFavorites(getFavorites());
   };
 
   useEffect(() => {
@@ -42,21 +51,33 @@ export default function Home() {
     const onChange = () => load();
     window.addEventListener("name-changed", onChange);
     window.addEventListener("achievement", onChange);
+    window.addEventListener("favorites-changed", onChange);
     return () => {
       window.removeEventListener("name-changed", onChange);
       window.removeEventListener("achievement", onChange);
+      window.removeEventListener("favorites-changed", onChange);
     };
   }, []);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    return GAMES.filter(
+    let list = GAMES.filter(
       (g) =>
-        (cat === "all" || g.category === cat) &&
+        (cat === "all" ||
+          (cat === "favorites" && favorites.includes(g.slug)) ||
+          g.category === cat) &&
         (!showHot || g.hot) &&
         (!needle || g.title.toLowerCase().includes(needle) || g.blurb.toLowerCase().includes(needle))
     );
-  }, [q, cat, showHot]);
+    if (mounted) {
+      if (sort === "best") list = [...list].sort((a, b) => getHighScore(b.slug) - getHighScore(a.slug));
+      else if (sort === "plays") list = [...list].sort((a, b) => getStats(b.slug).plays - getStats(a.slug).plays);
+      else if (sort === "az") list = [...list].sort((a, b) => a.title.localeCompare(b.title));
+      else if (sort === "recent") list = [...list].sort((a, b) => (getStats(b.slug).lastPlayedAt ?? 0) - (getStats(a.slug).lastPlayedAt ?? 0));
+      else if (sort === "hot") list = [...list].sort((a, b) => Number(!!b.hot) - Number(!!a.hot));
+    }
+    return list;
+  }, [q, cat, showHot, sort, favorites, mounted]);
 
   const recentGames = useMemo(
     () => recent.map((s) => GAMES.find((g) => g.slug === s)).filter(Boolean) as typeof GAMES,
@@ -70,29 +91,42 @@ export default function Home() {
       .filter((x) => x.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
-  }, [mounted, recent]); // refresh on mount + recent change
+  }, [mounted, recent]);
 
   const daily = useMemo(() => dailyGame(), []);
   const dateLabel = mounted ? dailyDateLabel() : "";
+
+  const playRandom = () => {
+    const pool = filtered.length ? filtered : GAMES;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    router.push(`/games/${pick.slug}`);
+  };
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: GAMES.length, favorites: favorites.length };
+    for (const g of GAMES) counts[g.category] = (counts[g.category] ?? 0) + 1;
+    return counts;
+  }, [favorites]);
 
   return (
     <div className="min-h-screen safe-pad">
       {/* HERO */}
       <header className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12 pb-6">
-        <div className="absolute -top-10 -left-10 w-72 h-72 bg-neon-purple/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-0 right-0 w-72 h-72 bg-neon-cyan/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-10 -left-10 w-72 h-72 bg-neon-purple/25 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-72 h-72 bg-neon-cyan/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-20 left-1/3 w-48 h-48 bg-neon-pink/15 rounded-full blur-3xl pointer-events-none" />
 
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="relative">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-white/40 mb-2">
-                <Gamepad2 size={14} /> Browser Arcade
+                <Gamepad2 size={14} /> Browser Arcade · {GAMES.length} games
               </div>
               <h1 className="pixel-font text-3xl sm:text-5xl md:text-6xl neon-text leading-tight">
                 ARCADE-{GAMES.length}
               </h1>
               <p className="mt-3 text-sm sm:text-base text-white/60 max-w-xl">
-                {GAMES.length} polished classic games in one tab. Mobile-friendly · zero install · global ambitions.
+                Classic arcade, modern web. Free to play · mobile-friendly · zero install · {GAMES.filter((g) => g.category === "3d").length} 3D games.
               </p>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <button
@@ -108,14 +142,20 @@ export default function Home() {
                   <span className="text-sm"><b className="text-neon-yellow">{achCount}</b><span className="text-white/40">/{ACHIEVEMENTS.length}</span></span>
                 </Link>
                 <Link href="/stats" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-cyan/10 border border-neon-cyan/30 hover:bg-neon-cyan/20 transition">
-                  <Star size={14} className="text-neon-cyan" />
+                  <Zap size={14} className="text-neon-cyan" />
                   <span className="text-sm"><b className="text-neon-cyan">{totalPlays}</b> <span className="text-white/40">plays</span></span>
                 </Link>
+                <button onClick={playRandom} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-pink/15 border border-neon-pink/40 hover:bg-neon-pink/25 transition text-sm text-neon-pink">
+                  <Shuffle size={14} /> Random
+                </button>
               </div>
             </div>
             <div className="flex gap-2">
               <Link href="/leaderboard" className="btn-primary">
                 <Trophy size={16} /> Leaderboards
+              </Link>
+              <Link href="/settings" className="btn-ghost" aria-label="Settings">
+                <SettingsIcon size={16} />
               </Link>
             </div>
           </div>
@@ -126,7 +166,7 @@ export default function Home() {
         {/* DAILY CHALLENGE */}
         <Link
           href={`/games/${daily.slug}`}
-          className="block mb-10 p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-neon-purple/25 via-neon-pink/15 to-neon-cyan/25 border-2 border-neon-purple/40 hover:border-neon-purple/80 transition shadow-neon overflow-hidden relative"
+          className="block mb-8 p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-neon-purple/25 via-neon-pink/15 to-neon-cyan/25 border-2 border-neon-purple/40 hover:border-neon-purple/80 transition shadow-neon overflow-hidden relative"
         >
           <div className="absolute -right-10 -top-10 w-40 h-40 bg-neon-yellow/10 rounded-full blur-2xl pointer-events-none" />
           <div className="flex items-center gap-5 relative">
@@ -150,27 +190,20 @@ export default function Home() {
           </div>
         </Link>
 
-        {/* TOP SCORES STRIP */}
-        {topScores.length > 0 && (
-          <section className="mb-10">
-            <h2 className="flex items-center gap-2 text-sm uppercase tracking-wider text-white/50 mb-3">
-              <Trophy size={14} /> Your top scores
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              {topScores.map(({ g, score }) => (
-                <Link
-                  key={g.slug}
-                  href={`/games/${g.slug}`}
-                  className="flex items-center gap-2 p-3 rounded-xl bg-bg-card/60 border border-white/5 hover:border-neon-yellow/40 transition"
-                >
-                  <div className="text-2xl">{g.emoji}</div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs text-white/50 truncate">{g.title}</div>
-                    <div className="text-base font-bold text-neon-yellow tabular-nums">{score.toLocaleString()}</div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+        {/* QUICK STATS GRID */}
+        {mounted && totalPlays > 0 && (
+          <section className="mb-8 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: "Total plays", value: totalPlays, color: "text-neon-cyan" },
+              { label: "Best score", value: topScores[0] ? topScores[0].score.toLocaleString() : "—", color: "text-neon-yellow" },
+              { label: "Favorites", value: favorites.length, color: "text-neon-pink" },
+              { label: "Achievements", value: `${achCount}/${ACHIEVEMENTS.length}`, color: "text-neon-purple" },
+            ].map((s) => (
+              <div key={s.label} className="p-3 rounded-xl bg-bg-card/60 border border-white/5">
+                <div className="text-[10px] text-white/40 uppercase tracking-wide">{s.label}</div>
+                <div className={cn("text-2xl pixel-font tabular-nums", s.color)}>{s.value}</div>
+              </div>
+            ))}
           </section>
         )}
 
@@ -189,16 +222,33 @@ export default function Home() {
         )}
 
         {/* FILTERS */}
-        <section className="sticky top-0 z-20 -mx-4 sm:mx-0 px-4 sm:px-0 py-3 bg-bg/85 backdrop-blur">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search games (e.g. tetris, chess, mario)..."
-                className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-neon-purple/60 focus:outline-none text-sm"
-              />
+        <section className="sticky top-0 z-20 -mx-4 sm:mx-0 px-4 sm:px-0 py-3 bg-bg/90 backdrop-blur">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Search games (e.g. tetris, mario, sudoku)..."
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-neon-purple/60 focus:outline-none text-sm"
+                />
+              </div>
+              <div className="relative">
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as SortKey)}
+                  className="appearance-none pl-9 pr-8 py-2.5 rounded-xl bg-white/5 border border-white/10 focus:border-neon-purple/60 outline-none text-sm cursor-pointer"
+                >
+                  <option value="default">Default</option>
+                  <option value="hot">🔥 Hot first</option>
+                  <option value="recent">Recently played</option>
+                  <option value="best">Best score</option>
+                  <option value="plays">Most plays</option>
+                  <option value="az">A → Z</option>
+                </select>
+                <ArrowUpDown size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
+              </div>
             </div>
             <div className="flex gap-1 overflow-x-auto -mx-1 px-1 scrollbar-hide">
               {CATS.map((c) => (
@@ -213,6 +263,7 @@ export default function Home() {
                   )}
                 >
                   <span>{c.emoji}</span> {c.label}
+                  <span className="text-[10px] text-white/40">({categoryCounts[c.id] ?? 0})</span>
                 </button>
               ))}
               <button
@@ -224,7 +275,7 @@ export default function Home() {
                     : "bg-white/5 border-white/10 text-white/60 hover:text-white"
                 )}
               >
-                <Flame size={12} /> Hot
+                <Flame size={12} /> Hot only
               </button>
             </div>
           </div>
@@ -234,11 +285,19 @@ export default function Home() {
         <section className="mt-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm uppercase tracking-wider text-white/50">
-              {filtered.length === GAMES.length ? "All games" : `${filtered.length} game${filtered.length !== 1 ? "s" : ""}`}
+              {cat === "favorites" ? "Your favorites" : filtered.length === GAMES.length ? "All games" : `${filtered.length} game${filtered.length !== 1 ? "s" : ""}`}
             </h2>
+            {filtered.length > 0 && (
+              <button onClick={playRandom} className="text-xs text-white/50 hover:text-neon-pink inline-flex items-center gap-1">
+                <Shuffle size={12} /> Random from filtered
+              </button>
+            )}
           </div>
           {filtered.length === 0 ? (
-            <p className="text-center text-white/40 py-12">No games match your filters.</p>
+            <div className="text-center py-16">
+              <p className="text-white/40 mb-3">{cat === "favorites" ? "No favorites yet. Tap ⭐ on any game card to add it here." : "No games match your filters."}</p>
+              {cat === "favorites" && <button onClick={() => setCat("all")} className="btn-ghost text-sm">Browse all games</button>}
+            </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
               {filtered.map((g, i) => (
@@ -250,12 +309,13 @@ export default function Home() {
 
         <footer className="mt-16 pt-8 border-t border-white/5 text-center text-xs text-white/40 space-y-2">
           <p>
-            Built with Next.js · Hosted on Vercel · Mobile-friendly · Free to play
+            Built with Next.js + Three.js · Hosted on Vercel · Free to play
           </p>
           <p className="space-x-3">
             <Link href="/stats" className="hover:text-neon-cyan">Stats</Link>
             <Link href="/achievements" className="hover:text-neon-yellow">Achievements</Link>
             <Link href="/leaderboard" className="hover:text-neon-purple">Leaderboards</Link>
+            <Link href="/settings" className="hover:text-neon-pink">Settings</Link>
           </p>
         </footer>
       </main>

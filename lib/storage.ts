@@ -106,6 +106,24 @@ export function setPlayerName(name: string) {
   write("player:name", name);
 }
 
+// Favorites
+export function getFavorites(): string[] {
+  return read<string[]>("favorites", []);
+}
+export function toggleFavorite(slug: string): boolean {
+  const cur = getFavorites();
+  let nextList: string[];
+  let isFav: boolean;
+  if (cur.includes(slug)) { nextList = cur.filter((s) => s !== slug); isFav = false; }
+  else { nextList = [...cur, slug]; isFav = true; }
+  write("favorites", nextList);
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("favorites-changed"));
+  return isFav;
+}
+export function isFavorite(slug: string): boolean {
+  return getFavorites().includes(slug);
+}
+
 // Recently played
 export function pushRecent(slug: string) {
   const list = read<string[]>("recent", []);

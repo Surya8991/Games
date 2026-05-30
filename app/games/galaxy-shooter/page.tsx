@@ -9,6 +9,7 @@ import { getGame } from "@/lib/games-meta";
 import { getHighScore, pushRecent, setHighScore, updateStats } from "@/lib/storage";
 import { useSound } from "@/lib/useSound";
 import { makeScene, addStarfield, neonMat } from "@/lib/three-helpers";
+import { cn } from "@/lib/cn";
 
 export default function GalaxyShooter() {
   const game = getGame("galaxy-shooter")!;
@@ -17,6 +18,8 @@ export default function GalaxyShooter() {
   const [best, setBest] = useState(0);
   const [over, setOver] = useState(false);
   const [showHow, setShowHow] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [difficulty, setDifficulty] = useState<"easy" | "normal" | "hard">("normal");
   const { play, vibrate } = useSound();
 
   const sRef = useRef({
@@ -128,7 +131,8 @@ export default function GalaxyShooter() {
           (m as any).rotV = { x: Math.random() * 0.04, y: Math.random() * 0.04 };
           scene.add(m);
           st.asteroids.push({ mesh: m, v: new THREE.Vector3(0, 0, 0.12 + Math.random() * 0.06) });
-          st.spawnAt = t + Math.max(280, 700 - sRef.current.score * 4);
+          const spawnMul = difficulty === "easy" ? 1.6 : difficulty === "hard" ? 0.6 : 1.0;
+          st.spawnAt = t + Math.max(180, (700 - sRef.current.score * 4) * spawnMul);
         }
         // move asteroids
         for (let i = st.asteroids.length - 1; i >= 0; i--) {
@@ -167,7 +171,7 @@ export default function GalaxyShooter() {
   }, []); // scene initialized once
 
   return (
-    <GameShell game={game} score={score} best={best} onRestart={reset} onOpenHowTo={() => setShowHow(true)}>
+    <GameShell game={game} score={score} best={best} onRestart={reset} onOpenHowTo={() => setShowHow(true)} onOpenSettings={() => setShowSettings(true)} rightExtra={<span className="text-xs text-white/60 capitalize">{difficulty}</span>}>
       <canvas ref={canvasRef} className="rounded-2xl border border-white/10 shadow-neon bg-bg-soft w-[min(95vw,800px)] aspect-[800/520]" />
       <div className="mt-3 flex justify-center gap-3 sm:hidden">
         <button onPointerDown={() => (sRef.current.keys["a"] = true)} onPointerUp={() => (sRef.current.keys["a"] = false)} className="w-14 h-14 rounded-xl bg-white/10 border border-white/20 text-2xl">◀</button>
@@ -183,6 +187,15 @@ export default function GalaxyShooter() {
           <li>Pink asteroids = +100. Dodge or destroy.</li>
           <li>Spawn rate ramps with score.</li>
         </ul>
+      </Modal>
+      <Modal open={showSettings} onClose={() => setShowSettings(false)} title="Difficulty" footer={<button onClick={() => { setShowSettings(false); reset(); }} className="btn-primary w-full justify-center">Restart</button>}>
+        <div className="grid grid-cols-3 gap-2">
+          {(["easy", "normal", "hard"] as const).map((d) => (
+            <button key={d} onClick={() => setDifficulty(d)} className={cn("px-3 py-2 rounded-lg border text-sm capitalize", difficulty === d ? "bg-neon-purple/20 border-neon-purple/50" : "bg-white/5 border-white/10")}>
+              {d}
+            </button>
+          ))}
+        </div>
       </Modal>
     </GameShell>
   );

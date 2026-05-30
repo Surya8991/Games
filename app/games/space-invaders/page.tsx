@@ -8,6 +8,9 @@ import { getGame } from "@/lib/games-meta";
 import { getHighScore, pushRecent, setHighScore, updateStats } from "@/lib/storage";
 import { useSound } from "@/lib/useSound";
 import { useIsTouch } from "@/lib/useTouchControls";
+import { storage } from "@/lib/storage";
+import { Layers } from "lucide-react";
+import { cn } from "@/lib/cn";
 
 const W = 720, H = 540;
 const ROWS = 5, COLS = 11;
@@ -27,8 +30,12 @@ export default function SpaceInvadersGame() {
   const [lives, setLives] = useState(3);
   const [wave, setWave] = useState(1);
   const [showHow, setShowHow] = useState(false);
+  const [showLevels, setShowLevels] = useState(false);
+  const [startLevel, setStartLevel] = useState(1);
+  const [unlocked, setUnlocked] = useState(1);
   const touch = useIsTouch();
   const { play, vibrate } = useSound();
+  const TOTAL_LEVELS = 10;
 
   const s = useRef({
     px: W / 2 - 20,
@@ -73,15 +80,16 @@ export default function SpaceInvadersGame() {
     s.current.ufoAt = performance.now() + 12000 + Math.random() * 8000;
   }, []);
 
-  const reset = useCallback(() => {
-    setScore(0); setLives(3); setWave(1); setOver(false); setWon(false);
+  const reset = useCallback((wv = startLevel) => {
+    setScore(0); setLives(3); setWave(wv); setOver(false); setWon(false);
     s.current.px = W / 2 - 20;
-    spawnWave(1);
-  }, [spawnWave]);
+    spawnWave(wv);
+  }, [spawnWave, startLevel]);
 
   useEffect(() => {
     pushRecent("space-invaders");
     setBest(getHighScore("space-invaders"));
+    setUnlocked(storage.get<number>("space-invaders:unlocked", 1));
     reset();
   }, [reset]);
 
@@ -233,6 +241,9 @@ export default function SpaceInvadersGame() {
         if (st.aliens.every((a) => !a.alive)) {
           setWave((w) => {
             const nw = w + 1;
+            if (nw > unlocked && nw <= TOTAL_LEVELS) {
+              setUnlocked(nw); storage.set("space-invaders:unlocked", nw);
+            }
             spawnWave(nw);
             setLives((l) => l + 1); // bonus life
             return nw;
@@ -318,7 +329,11 @@ export default function SpaceInvadersGame() {
   }, [over, score, wave, spawnWave, play, vibrate]);
 
   return (
-    <GameShell game={game} score={score} best={best} onRestart={reset} onOpenHowTo={() => setShowHow(true)}>
+    <GameShell game={game} score={score} best={best} onRestart={() => reset()} onOpenHowTo={() => setShowHow(true)} rightExtra={
+      <button onClick={() => setShowLevels(true)} className="btn-ghost">
+        <Layers size={16} /> <span className="hidden sm:inline">Wv {wave}/{TOTAL_LEVELS}</span>
+      </button>
+    }>
       <canvas ref={canvasRef} width={W} height={H} className="rounded-2xl border border-white/10 shadow-neon bg-bg-soft w-[min(95vw,720px)] h-auto aspect-[720/540]" />
       {touch && (
         <div className="mt-4 flex justify-between w-[min(95vw,500px)]">
@@ -329,14 +344,32 @@ export default function SpaceInvadersGame() {
           <button onPointerDown={() => shoot()} className="w-16 h-16 rounded-2xl bg-neon-green/20 border-2 border-neon-green/50 text-neon-green font-bold">FIRE</button>
         </div>
       )}
-      <GameOverModal open={over} onClose={() => setOver(false)} score={score} best={best} isNewBest={score === best && score > 0} extra={<div className="text-xs text-white/60">Wave {wave}</div>} onRestart={reset} />
+      <GameOverModal open={over} onClose={() => setOver(false)} score={score} best={best} isNewBest={score === best && score > 0} extra={<div className="text-xs text-white/60">Wave {wave}</div>} onRestart={() => reset()} />
       <Modal open={showHow} onClose={() => setShowHow(false)} title="How to play">
         <ul className="list-disc pl-5 space-y-1 text-sm">
           <li>← → to move · Space to fire (max 3 bullets airborne).</li>
           <li>Aliens speed up as you destroy them. Each wave is faster.</li>
           <li>Pink rows = 40 / purple = 30 / cyan = 20 / green/yellow = 10 / red UFO = 200.</li>
           <li>Don't let them reach you. Bonus life every wave.</li>
+          <li>Beat 10 waves to complete the campaign. Higher waves spawn much faster.</li>
         </ul>
+      </Modal>
+      <Modal open={showLevels} onClose={() => setShowLevels(false)} title="Start at wave">
+        <div className="text-xs text-white/60 mb-2">Unlocked: {unlocked}/{TOTAL_LEVELS}</div>
+        <div className="grid grid-cols-5 gap-2">
+          {Array.from({ length: TOTAL_LEVELS }, (_, i) => i + 1).map((n) => {
+            const locked = n > unlocked;
+            return (
+              <button key={n} disabled={locked} onClick={() => { setStartLevel(n); reset(n); setShowLevels(false); }}
+                className={cn("aspect-square rounded-xl text-lg font-bold border",
+                  locked ? "bg-white/3 border-white/5 text-white/20" :
+                  n === wave ? "bg-neon-green/30 border-neon-green shadow-neon" :
+                  "bg-white/5 border-white/10 hover:bg-neon-green/20")}>
+                {locked ? "🔒" : n}
+              </button>
+            );
+          })}
+        </div>
       </Modal>
     </GameShell>
   );

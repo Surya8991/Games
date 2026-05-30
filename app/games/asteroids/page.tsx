@@ -9,6 +9,7 @@ import { getHighScore, pushRecent, setHighScore, updateStats } from "@/lib/stora
 import { useSound } from "@/lib/useSound";
 import { useIsTouch } from "@/lib/useTouchControls";
 import { unlock } from "@/lib/achievements";
+import { cn } from "@/lib/cn";
 
 const W = 800, H = 600;
 
@@ -45,8 +46,11 @@ export default function AsteroidsGame() {
   const [lives, setLives] = useState(3);
   const [wave, setWave] = useState(1);
   const [showHow, setShowHow] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [difficulty, setDifficulty] = useState<"easy" | "normal" | "hard" | "insane">("normal");
   const { play, vibrate } = useSound();
   const touch = useIsTouch();
+  const diffConfig = { easy: { rocks: 2, lives: 5 }, normal: { rocks: 3, lives: 3 }, hard: { rocks: 5, lives: 2 }, insane: { rocks: 7, lives: 1 } }[difficulty];
 
   const s = useRef({
     ship: { x: W / 2, y: H / 2, angle: -Math.PI / 2, vx: 0, vy: 0, cool: 0, invuln: 60 } as Ship,
@@ -61,13 +65,13 @@ export default function AsteroidsGame() {
 
   const startWave = (w: number) => {
     s.current.rocks = [];
-    for (let i = 0; i < 3 + w; i++) s.current.rocks.push(makeRock(40));
+    for (let i = 0; i < diffConfig.rocks + w; i++) s.current.rocks.push(makeRock(40));
   };
 
   const reset = () => {
     s.current.ship = { x: W / 2, y: H / 2, angle: -Math.PI / 2, vx: 0, vy: 0, cool: 0, invuln: 60 };
     s.current.bullets = []; s.current.ufoBullets = []; s.current.ufo = null;
-    setScore(0); setLives(3); setWave(1); setOver(false);
+    setScore(0); setLives(diffConfig.lives); setWave(1); setOver(false);
     startWave(1);
   };
 
@@ -301,7 +305,7 @@ export default function AsteroidsGame() {
   }, [over, lives, score, wave, play, vibrate]);
 
   return (
-    <GameShell game={game} score={score} best={best} onRestart={reset} onOpenHowTo={() => setShowHow(true)}>
+    <GameShell game={game} score={score} best={best} onRestart={reset} onOpenHowTo={() => setShowHow(true)} onOpenSettings={() => setShowSettings(true)} rightExtra={<span className="text-xs text-white/60 capitalize">{difficulty}</span>}>
       <canvas ref={canvasRef} width={W} height={H} className="rounded-2xl border border-white/10 shadow-neon bg-bg-soft w-[min(95vw,800px)] h-auto aspect-[800/600]" />
       {touch && (
         <div className="mt-4 grid grid-cols-3 gap-2 w-[min(95vw,400px)]">
@@ -320,6 +324,19 @@ export default function AsteroidsGame() {
           <li>UFOs appear in higher waves. Small UFOs aim at you. (1000 pts)</li>
           <li>Extra life every 10,000 points.</li>
         </ul>
+      </Modal>
+      <Modal open={showSettings} onClose={() => setShowSettings(false)} title="Difficulty" footer={<button onClick={() => { setShowSettings(false); reset(); }} className="btn-primary w-full justify-center">Restart</button>}>
+        <div className="grid grid-cols-2 gap-2">
+          {(["easy", "normal", "hard", "insane"] as const).map((d) => {
+            const cfg = { easy: { rocks: 2, lives: 5 }, normal: { rocks: 3, lives: 3 }, hard: { rocks: 5, lives: 2 }, insane: { rocks: 7, lives: 1 } }[d];
+            return (
+              <button key={d} onClick={() => setDifficulty(d)} className={cn("px-3 py-2 rounded-lg border text-sm capitalize", difficulty === d ? "bg-neon-purple/20 border-neon-purple/50" : "bg-white/5 border-white/10")}>
+                {d}
+                <div className="text-[10px] text-white/50">{cfg.rocks} rocks · {cfg.lives} {cfg.lives === 1 ? "life" : "lives"}</div>
+              </button>
+            );
+          })}
+        </div>
       </Modal>
     </GameShell>
   );

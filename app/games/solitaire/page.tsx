@@ -81,6 +81,8 @@ export default function SolitaireGame() {
   const [history, setHistory] = useState<State[]>([]);
   const [won, setWon] = useState(false);
   const [showHow, setShowHow] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [drawMode, setDrawMode] = useState<1 | 3>(1);
   const { play, vibrate } = useSound();
 
   useEffect(() => { pushRecent("solitaire"); }, []);
@@ -105,9 +107,12 @@ export default function SolitaireGame() {
       n.stock = n.waste.reverse().map((c) => ({ ...c, up: false }));
       n.waste = [];
     } else {
-      const c = n.stock.pop()!;
-      c.up = true;
-      n.waste.push(c);
+      const count = Math.min(drawMode, n.stock.length);
+      for (let i = 0; i < count; i++) {
+        const c = n.stock.pop()!;
+        c.up = true;
+        n.waste.push(c);
+      }
     }
     push(n);
     play("tick");
@@ -220,8 +225,9 @@ export default function SolitaireGame() {
   const newGame = () => { setState(deal()); setSel(null); setHistory([]); setWon(false); };
 
   return (
-    <GameShell game={game} onRestart={newGame} onOpenHowTo={() => setShowHow(true)} rightExtra={
-      <div className="flex gap-1">
+    <GameShell game={game} onRestart={newGame} onOpenHowTo={() => setShowHow(true)} onOpenSettings={() => setShowSettings(true)} rightExtra={
+      <div className="flex gap-1 items-center">
+        <span className="hidden sm:inline text-xs text-white/50">Draw-{drawMode}</span>
         <button onClick={undo} disabled={!history.length} className="btn-ghost disabled:opacity-30"><Undo2 size={16} /></button>
         <button onClick={autoToFoundation} className="btn-ghost text-xs">Auto</button>
       </div>
@@ -269,9 +275,20 @@ export default function SolitaireGame() {
           <li>Click a card to select, then click a destination to move.</li>
           <li>Tableau: stack descending with alternating colors. Kings start empty columns.</li>
           <li>Foundations (top right): build up A→K by suit. Win when all 4 are full.</li>
-          <li>Click the deck to draw to the waste. When deck empties, click to recycle.</li>
+          <li>Click the deck to draw. <b>Draw-1</b> = easy. <b>Draw-3</b> = classic challenge.</li>
           <li><b>Auto</b> sends every safe card to the foundations. <b>Undo</b> reverts the last move.</li>
         </ul>
+      </Modal>
+      <Modal open={showSettings} onClose={() => setShowSettings(false)} title="Settings" footer={<button onClick={() => { setShowSettings(false); newGame(); }} className="btn-primary w-full justify-center">New deal</button>}>
+        <p className="text-xs text-white/60 mb-2">Draw mode</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={() => setDrawMode(1)} className={cn("px-3 py-2 rounded-lg border text-sm", drawMode === 1 ? "bg-neon-purple/20 border-neon-purple/50" : "bg-white/5 border-white/10")}>
+            Draw 1<div className="text-[10px] text-white/50">Easy mode</div>
+          </button>
+          <button onClick={() => setDrawMode(3)} className={cn("px-3 py-2 rounded-lg border text-sm", drawMode === 3 ? "bg-neon-purple/20 border-neon-purple/50" : "bg-white/5 border-white/10")}>
+            Draw 3<div className="text-[10px] text-white/50">Classic</div>
+          </button>
+        </div>
       </Modal>
     </GameShell>
   );

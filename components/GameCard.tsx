@@ -5,12 +5,24 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import type { GameMeta } from "@/lib/games-meta";
-import { Flame, Trophy } from "lucide-react";
-import { getHighScore } from "@/lib/storage";
+import { Flame, Trophy, Star } from "lucide-react";
+import { getHighScore, isFavorite, toggleFavorite } from "@/lib/storage";
 
 export function GameCard({ game, index = 0 }: { game: GameMeta; index?: number }) {
   const [best, setBest] = useState<number>(0);
-  useEffect(() => { setBest(getHighScore(game.slug)); }, [game.slug]);
+  const [fav, setFav] = useState(false);
+  useEffect(() => {
+    setBest(getHighScore(game.slug));
+    setFav(isFavorite(game.slug));
+    const onFav = () => setFav(isFavorite(game.slug));
+    window.addEventListener("favorites-changed", onFav);
+    return () => window.removeEventListener("favorites-changed", onFav);
+  }, [game.slug]);
+  const onStarClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFav(toggleFavorite(game.slug));
+  };
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -19,9 +31,19 @@ export function GameCard({ game, index = 0 }: { game: GameMeta; index?: number }
     >
       <Link
         href={`/games/${game.slug}`}
-        className="arcade-card group block p-4 sm:p-5 h-full"
+        className="arcade-card group block p-4 sm:p-5 h-full relative"
         aria-label={`Play ${game.title}`}
       >
+        <button
+          onClick={onStarClick}
+          aria-label={fav ? "Remove favorite" : "Add favorite"}
+          className={cn(
+            "absolute top-2 right-2 z-10 p-1.5 rounded-full transition-all",
+            fav ? "text-neon-yellow drop-shadow-[0_0_8px_rgba(253,224,71,0.7)]" : "text-white/30 hover:text-neon-yellow opacity-0 group-hover:opacity-100"
+          )}
+        >
+          <Star size={16} fill={fav ? "currentColor" : "none"} />
+        </button>
         <div className="flex items-start justify-between mb-3">
           <div className="text-5xl sm:text-6xl select-none transition-all duration-300 group-hover:scale-110 group-hover:-rotate-6 group-hover:drop-shadow-[0_0_12px_rgba(177,74,237,0.5)]">
             {game.emoji}

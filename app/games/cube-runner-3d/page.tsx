@@ -10,6 +10,7 @@ import { getHighScore, pushRecent, setHighScore, updateStats } from "@/lib/stora
 import { useSound } from "@/lib/useSound";
 import { useSwipe } from "@/lib/useTouchControls";
 import { makeScene, addStarfield, neonMat } from "@/lib/three-helpers";
+import { cn } from "@/lib/cn";
 
 const LANES = 5;
 const LANE_WIDTH = 1.2;
@@ -23,6 +24,8 @@ export default function CubeRunner3D() {
   const [best, setBest] = useState(0);
   const [over, setOver] = useState(false);
   const [showHow, setShowHow] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [speedMode, setSpeedMode] = useState<"chill" | "normal" | "extreme">("normal");
   const { play, vibrate } = useSound();
 
   const stateRef = useRef({
@@ -116,7 +119,8 @@ export default function CubeRunner3D() {
 
       if (!st.over) {
         st.timeAlive += dt;
-        st.speed = Math.min(0.42, 0.18 + st.timeAlive * 0.00002);
+        const speedMul = speedMode === "chill" ? 0.7 : speedMode === "extreme" ? 1.6 : 1.0;
+        st.speed = Math.min(0.55, (0.18 + st.timeAlive * 0.00002) * speedMul);
 
         // smooth lane
         st.currentLane += (st.targetLane - st.currentLane) * 0.22;
@@ -192,7 +196,7 @@ export default function CubeRunner3D() {
   }, []); // scene initialized once; loop reads stateRef.current.over
 
   return (
-    <GameShell game={game} score={score} best={best} onRestart={reset} onOpenHowTo={() => setShowHow(true)} rightExtra={<span className="text-xs text-neon-yellow">× {coins}</span>}>
+    <GameShell game={game} score={score} best={best} onRestart={reset} onOpenHowTo={() => setShowHow(true)} onOpenSettings={() => setShowSettings(true)} rightExtra={<span className="text-xs text-neon-yellow">× {coins} · {speedMode}</span>}>
       <div ref={wrapRef} className="no-scroll">
         <canvas ref={canvasRef} className="rounded-2xl border border-white/10 shadow-neon bg-bg-soft w-[min(95vw,800px)] aspect-[800/520]" />
       </div>
@@ -207,6 +211,15 @@ export default function CubeRunner3D() {
           <li>Pink cubes kill you. Yellow rings give coins (+10 score each).</li>
           <li>Speed ramps up over time.</li>
         </ul>
+      </Modal>
+      <Modal open={showSettings} onClose={() => setShowSettings(false)} title="Speed mode" footer={<button onClick={() => { setShowSettings(false); reset(); }} className="btn-primary w-full justify-center">Restart</button>}>
+        <div className="grid grid-cols-3 gap-2">
+          {(["chill", "normal", "extreme"] as const).map((m) => (
+            <button key={m} onClick={() => setSpeedMode(m)} className={cn("px-3 py-2 rounded-lg border text-sm capitalize", speedMode === m ? "bg-neon-cyan/20 border-neon-cyan/50" : "bg-white/5 border-white/10")}>
+              {m}
+            </button>
+          ))}
+        </div>
       </Modal>
     </GameShell>
   );
