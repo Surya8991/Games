@@ -5,15 +5,26 @@ import { GameShell } from "@/components/GameShell";
 import { GameOverModal } from "@/components/GameOverModal";
 import { Modal } from "@/components/Modal";
 import { getGame } from "@/lib/games-meta";
-import { getHighScore, pushRecent, setHighScore, updateStats } from "@/lib/storage";
+import { getHighScore, pushRecent, setHighScore, storage, updateStats } from "@/lib/storage";
 import { useSound } from "@/lib/useSound";
+import { Layers } from "lucide-react";
+import { cn } from "@/lib/cn";
 
 const W = 480, H = 640;
 const R = 18;
 const COLORS = ["#ec4899", "#22d3ee", "#fde047", "#22ee9c", "#a855f7"];
 const COLS = Math.floor(W / (R * 2));
+const TOTAL_LEVELS = 20;
 type Bubble = { gx: number; gy: number; color: number; alive: boolean } | null;
 type Flying = { x: number; y: number; vx: number; vy: number; color: number };
+
+function levelDef(lvl: number) {
+  // rows of bubbles, color palette size, shots allowed
+  const rows = Math.min(12, 5 + Math.floor(lvl / 2));
+  const colorCount = Math.min(5, 3 + Math.floor(lvl / 5));
+  const shots = Math.max(18, 36 - lvl);
+  return { rows, colorCount, shots };
+}
 
 function gridX(gx: number, gy: number) {
   return gx * R * 2 + (gy % 2 === 1 ? R : 0) + R;
@@ -38,7 +49,10 @@ export default function BubbleShooterGame() {
   const [won, setWon] = useState(false);
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(0);
+  const [level, setLevel] = useState(1);
+  const [unlocked, setUnlocked] = useState(1);
   const [showHow, setShowHow] = useState(false);
+  const [showLevels, setShowLevels] = useState(false);
   const { play, vibrate } = useSound();
 
   const s = useRef({
@@ -53,14 +67,14 @@ export default function BubbleShooterGame() {
     shotsLeft: 30,
   });
 
-  const initGrid = () => {
-    const startRows = 8;
+  const initGrid = (lvl = level) => {
+    const { rows: startRows, colorCount } = levelDef(lvl);
     const g: Bubble[][] = [];
     for (let r = 0; r < startRows; r++) {
       const row: Bubble[] = [];
       const cols = r % 2 === 1 ? COLS - 1 : COLS;
       for (let c = 0; c < cols; c++) {
-        row.push({ gx: c, gy: r, color: Math.floor(Math.random() * COLORS.length), alive: true });
+        row.push({ gx: c, gy: r, color: Math.floor(Math.random() * colorCount), alive: true });
       }
       g.push(row);
     }
@@ -75,19 +89,21 @@ export default function BubbleShooterGame() {
     return arr[Math.floor(Math.random() * arr.length)];
   };
 
-  const reset = useCallback(() => {
-    s.current.grid = initGrid();
+  const reset = useCallback((lvl = level) => {
+    s.current.grid = initGrid(lvl);
     s.current.nextColor = pickNext(s.current.grid);
     s.current.flying = null;
-    s.current.shotsLeft = 30;
+    s.current.shotsLeft = levelDef(lvl).shots;
+    setLevel(lvl);
     setScore(0); setOver(false); setWon(false);
-  }, []);
+    setBest(getHighScore("bubble-shooter", `lvl-${lvl}`));
+  }, [level]); // eslint-disable-line
 
   useEffect(() => {
     pushRecent("bubble-shooter");
-    setBest(getHighScore("bubble-shooter"));
-    reset();
-  }, [reset]);
+    setUnlocked(storage.get<number>("bubble-shooter:unlocked", 1));
+    reset(1);
+  }, []); // eslint-disable-line
 
   // Pointer
   useEffect(() => {
@@ -230,11 +246,13 @@ export default function BubbleShooterGame() {
             setOver(true); setWon(true);
             play("win"); vibrate([40, 30, 60]);
             updateStats("bubble-shooter", { plays: 1, wins: 1, bestScore: score });
-            const ok = setHighScore("bubble-shooter", score); if (ok) setBest(score);
+            const ok = setHighScore("bubble-shooter", score, `lvl-${level}`); if (ok) setBest(score);
+            const next = level + 1;
+            if (next > unlocked && next <= TOTAL_LEVELS) { setUnlocked(next); storage.set("bubble-shooter:unlocked", next); }
           }
           if (st.shotsLeft <= 0 && alive) {
             setOver(true); play("lose"); vibrate(150);
-            const ok = setHighScore("bubble-shooter", score); if (ok) setBest(score);
+            const ok = setHighScore("bubble-shooter", score, `lvl-${level}`); if (ok) setBest(score);
             updateStats("bubble-shooter", { plays: 1, losses: 1 });
           }
         }
@@ -282,17 +300,61 @@ export default function BubbleShooterGame() {
     return () => cancelAnimationFrame(raf);
   }, [over, score, play, vibrate]);
 
+  const nextLevel = () => reset(Math.min(TOTAL_LEVELS, level + 1));
+
   return (
-    <GameShell game={game} score={score} best={best} onRestart={reset} onOpenHowTo={() => setShowHow(true)}>
+    <GameShell
+      game={game}
+      score={score}
+      best={best}
+      onRestart={() => reset(level)}
+      onOpenHowTo={() => setShowHow(true)}
+      rightExtra={
+        <button onClick={() => setShowLevels(true)} className="btn-ghost">
+          <Layers size={16} /> <span className="hidden sm:inline">Lvl {level}/{TOTAL_LEVELS}</span>
+        </button>
+      }
+    >
       <canvas ref={canvasRef} width={W} height={H} className="rounded-2xl border border-white/10 shadow-neon bg-bg-soft w-[min(95vw,480px)] h-auto aspect-[480/640] cursor-crosshair touch-none" />
-      <GameOverModal open={over} onClose={() => setOver(false)} title={won ? "Cleared!" : "Out of shots"} score={score} best={best} isNewBest={score === best && score > 0} onRestart={reset} />
+      <GameOverModal
+        open={over}
+        onClose={() => setOver(false)}
+        title={won ? `Level ${level} cleared!` : "Out of shots"}
+        score={score}
+        best={best}
+        isNewBest={score === best && score > 0}
+        extra={
+          won && level < TOTAL_LEVELS ? <button onClick={nextLevel} className="btn-primary mt-2">Next level →</button>
+          : won && level >= TOTAL_LEVELS ? <div className="text-neon-yellow">🏆 ALL 20 LEVELS CLEARED!</div>
+          : null
+        }
+        onRestart={() => reset(level)}
+      />
       <Modal open={showHow} onClose={() => setShowHow(false)} title="How to play">
         <ul className="list-disc pl-5 space-y-1 text-sm">
           <li>Aim with mouse/touch. Click/tap to shoot.</li>
           <li>Match 3+ same-color bubbles to pop them.</li>
-          <li>Disconnected groups fall (bonus points).</li>
-          <li>Clear the board within 30 shots to win.</li>
+          <li>Disconnected groups fall for bonus points.</li>
+          <li>Clear the board within the shot limit to advance.</li>
+          <li>20 levels — more rows, more colors, fewer shots each time.</li>
         </ul>
+      </Modal>
+      <Modal open={showLevels} onClose={() => setShowLevels(false)} title="Select Level">
+        <div className="text-xs text-white/60 mb-2">Unlocked: {unlocked}/{TOTAL_LEVELS}</div>
+        <div className="grid grid-cols-5 gap-2">
+          {Array.from({ length: TOTAL_LEVELS }, (_, i) => i + 1).map((n) => {
+            const locked = n > unlocked;
+            return (
+              <button key={n} disabled={locked} onClick={() => { reset(n); setShowLevels(false); }}
+                className={cn("aspect-square rounded-xl text-lg font-bold border",
+                  locked ? "bg-white/3 border-white/5 text-white/20" :
+                  n === level ? "bg-neon-cyan/30 border-neon-cyan shadow-neon-cyan" :
+                  "bg-white/5 border-white/10 hover:bg-neon-cyan/20")}>
+                {locked ? "🔒" : n}
+              </button>
+            );
+          })}
+        </div>
       </Modal>
     </GameShell>
   );

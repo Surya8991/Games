@@ -23,11 +23,11 @@ export function GameCard({ game, index = 0 }: { game: GameMeta; index?: number }
         aria-label={`Play ${game.title}`}
       >
         <div className="flex items-start justify-between mb-3">
-          <div className="text-4xl sm:text-5xl select-none transition-transform group-hover:scale-110 group-hover:animate-float">
+          <div className="text-5xl sm:text-6xl select-none transition-all duration-300 group-hover:scale-110 group-hover:-rotate-6 group-hover:drop-shadow-[0_0_12px_rgba(177,74,237,0.5)]">
             {game.emoji}
           </div>
           {game.hot && (
-            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-neon-pink/15 text-neon-pink border border-neon-pink/40">
+            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-neon-pink/20 text-neon-pink border border-neon-pink/50 shadow-neon-pink animate-pulse">
               <Flame size={10} /> HOT
             </span>
           )}

@@ -8,13 +8,13 @@ import { getGame } from "@/lib/games-meta";
 import { getHighScore, pushRecent, setHighScore, updateStats } from "@/lib/storage";
 import { useSound } from "@/lib/useSound";
 import { cn } from "@/lib/cn";
-
-const WORDS = "ANCHOR APPLE ASTEROID AVENUE BANJO BASKET BEACON BIRTHDAY BLANKET BOTTLE BRIDGE BUTTERFLY CACTUS CAMERA CANDLE CAPTAIN CARTOON CASTLE CHALLENGE CHEESE CHERRY CHIMNEY CIRCUS COMPUTER COUNTRY CRYSTAL DELIGHT DIAMOND DISCOVER DRAGON DREAM EAGLE EARLY EARTH EFFORT ENERGY ENGINE EQUATOR FACTORY FAMILY FANTASY FEATHER FESTIVE FOREST FORTUNE FRAGILE FRIDAY FROZEN GADGET GALAXY GARLIC GATHER GENEROUS GIRAFFE GLACIER GLITTER GOLDEN GUITAR HAMMER HARBOR HARMONY HEART HEAVEN HOLIDAY HONEYCOMB HORIZON IMPACT INSTANT INVENT ISLAND JACKET JAGUAR JOURNAL JUSTICE KETTLE KINGDOM KITTEN KNIGHT LANTERN LEAGUE LEGEND LEMONADE LIBRARY LIGHTNING LIQUID LIZARD MAGNET MANGO MARBLE MEADOW MIDNIGHT MIRROR MISSION MONKEY MORNING MOUNTAIN MUSEUM MYSTERY NEPTUNE NEUTRAL NEUTRON OASIS OCTAGON OCTOPUS ORBIT ORCHID OXYGEN PALACE PARADISE PEBBLE PELICAN PENGUIN PHOENIX PILLOW PIRATE PIZZA PLANET PLATINUM PLAYFUL POISON POLISH POTION PRINCE PUZZLE PYTHON QUASAR QUARTZ QUIVER RABBIT RAINBOW RECIPE REPTILE RIDDLE ROBOT ROCKET SAILOR SAMURAI SAPPHIRE SATELLITE SCISSORS SECRET SENSOR SHADOW SHIMMER SIGNAL SILVER SKETCH SOLAR SPARROW SPIDER SPONGE SQUIRREL STADIUM STELLAR STORM SUMMER SUNRISE SUNSET TABLET TEMPLE THUNDER TIGER TOMATO TORTOISE TRAVEL TREASURE TROPHY TUNNEL TWILIGHT UMBRELLA UNICORN UNIVERSE VALLEY VAPOR VELVET VICTORY VIOLIN VOLCANO VOYAGE WAFFLE WALRUS WATERFALL WEDDING WHISPER WILDLIFE WINDOW WINTER WIZARD YELLOW ZEBRA ZIGZAG".split(" ");
+import { getWords, HangmanCategory, CATEGORY_LABELS } from "@/lib/hangman-words";
 
 const MAX_WRONG = 6;
 
 export default function HangmanGame() {
   const game = getGame("hangman")!;
+  const [category, setCategory] = useState<HangmanCategory>("common");
   const [word, setWord] = useState("");
   const [guessed, setGuessed] = useState<Set<string>>(new Set());
   const [over, setOver] = useState(false);
@@ -22,24 +22,29 @@ export default function HangmanGame() {
   const [streak, setStreak] = useState(0);
   const [best, setBest] = useState(0);
   const [showHow, setShowHow] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const { play, vibrate } = useSound();
 
   const wrong = useMemo(() => Array.from(guessed).filter((c) => !word.includes(c)).length, [guessed, word]);
 
-  const newRound = useCallback((keepStreak = false) => {
-    const w = WORDS[Math.floor(Math.random() * WORDS.length)];
+  const newRound = useCallback((cat = category, keepStreak = false) => {
+    const list = getWords(cat);
+    const w = list[Math.floor(Math.random() * list.length)];
     setWord(w);
     setGuessed(new Set());
     setOver(false);
     setWon(false);
+    setCategory(cat);
     if (!keepStreak) setStreak(0);
-  }, []);
+  }, [category]);
 
   useEffect(() => {
     pushRecent("hangman");
-    setBest(getHighScore("hangman"));
-    newRound();
-  }, [newRound]);
+    setBest(getHighScore("hangman", category));
+    newRound("common");
+  }, []); // eslint-disable-line
+
+  useEffect(() => { setBest(getHighScore("hangman", category)); }, [category]);
 
   const guess = useCallback((letter: string) => {
     if (over || guessed.has(letter)) return;
@@ -54,7 +59,7 @@ export default function HangmanGame() {
         play("win"); vibrate([40, 30, 60]);
         const ns = streak + 1;
         setStreak(ns);
-        const ok = setHighScore("hangman", ns); if (ok) setBest(ns);
+        const ok = setHighScore("hangman", ns, category); if (ok) setBest(ns);
         updateStats("hangman", { plays: 1, wins: 1, bestScore: ns });
       }
     } else {
@@ -99,7 +104,7 @@ export default function HangmanGame() {
   ];
 
   return (
-    <GameShell game={game} score={`${wrong}/${MAX_WRONG}`} best={best} onRestart={() => newRound()} onOpenHowTo={() => setShowHow(true)} rightExtra={<span className="text-xs text-white/60">Streak: <span className="text-neon-yellow">{streak}</span></span>}>
+    <GameShell game={game} score={`${wrong}/${MAX_WRONG}`} best={best} onRestart={() => newRound()} onOpenHowTo={() => setShowHow(true)} onOpenSettings={() => setShowSettings(true)} rightExtra={<span className="text-xs text-white/60">Streak: <span className="text-neon-yellow">{streak}</span> · {CATEGORY_LABELS[category]}</span>}>
       <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-10">
         <svg viewBox="0 0 160 200" className="w-40 h-52" stroke="#22d3ee" strokeWidth="3" fill="none" strokeLinecap="round">
           {parts.slice(0, 4 + wrong)}
@@ -140,13 +145,20 @@ export default function HangmanGame() {
         })}
       </div>
 
-      <GameOverModal open={over} onClose={() => setOver(false)} title={won ? "You got it!" : `Hanged! Word was ${word}`} score={streak} best={best} extra={won ? <div className="text-xs text-white/60">Streak: {streak}</div> : null} onRestart={() => newRound(false)} />
+      <GameOverModal open={over} onClose={() => setOver(false)} title={won ? "You got it!" : `Hanged! Word was ${word}`} score={streak} best={best} extra={won ? <div className="text-xs text-white/60">Streak: {streak}</div> : null} onRestart={() => newRound(category, false)} />
       <Modal open={showHow} onClose={() => setShowHow(false)} title="How to play">
         <ul className="list-disc pl-5 space-y-1 text-sm">
           <li>Guess the word one letter at a time. Type letters or click them.</li>
           <li>6 wrong guesses = game over. Streak resets.</li>
-          <li>Solve to advance. Score = current streak.</li>
+          <li>Pick a category in settings: Common, Animals, Food, Places, Tech, Movies, Expert.</li>
         </ul>
+      </Modal>
+      <Modal open={showSettings} onClose={() => setShowSettings(false)} title="Category" footer={<button onClick={() => { setShowSettings(false); newRound(category, false); }} className="btn-primary w-full justify-center">New word</button>}>
+        <div className="grid grid-cols-2 gap-2">
+          {(Object.keys(CATEGORY_LABELS) as HangmanCategory[]).map((c) => (
+            <button key={c} onClick={() => setCategory(c)} className={cn("px-3 py-2 rounded-lg border text-sm", category === c ? "bg-neon-yellow/20 border-neon-yellow/50" : "bg-white/5 border-white/10")}>{CATEGORY_LABELS[c]}</button>
+          ))}
+        </div>
       </Modal>
     </GameShell>
   );
